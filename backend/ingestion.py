@@ -217,12 +217,14 @@ async def get_progress(doc_id: str, request: Request):
 @lru_cache(maxsize=128)
 def cached_query(query_str: str, doc_id: str) -> str:
     vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
-    index = VectorStoreIndex.from_vector_store(vector_store)
+    embed_model = OllamaEmbedding(model_name="nomic-embed-text")
+    index = VectorStoreIndex.from_vector_store(vector_store, embed_model=embed_model)
     
     from llama_index.core.vector_stores import ExactMatchFilter, MetadataFilters
     filters = MetadataFilters(filters=[ExactMatchFilter(key="document_id", value=doc_id)])
     
-    query_engine = index.as_query_engine(filters=filters)
+    llm = Ollama(model="gemma3:latest", request_timeout=120.0)
+    query_engine = index.as_query_engine(filters=filters, llm=llm, similarity_top_k=5)
     response = query_engine.query(query_str)
     return str(response)
 
