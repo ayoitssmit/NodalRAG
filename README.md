@@ -108,6 +108,17 @@ Run these scripts from the `backend` directory with your virtual environment act
    python test_chroma_llamaindex.py
    ```
 
+## Augmented Ingestion Pipeline
+
+NodalRAG features a highly optimized, multi-layered ingestion pipeline designed for accuracy and performance:
+
+1. **PDF Parsing & Smart Chunking**: Uses LlamaIndex's `SimpleDirectoryReader` and `SentenceSplitter` (768 token chunks, 10% overlap) to parse documents while retaining page numbers for source attribution.
+2. **Contextual Retrieval**: Calls Llama 3 to generate a 2-sentence summary for each document. This summary is prepended to the chunk's text before embedding, ensuring chunks are never orphaned from their overarching context.
+3. **File Hash Deduplication (Cache Layer 1)**: Uploaded files are SHA-256 hashed and stored in a local SQLite sidecar. Identical files instantly bypass ingestion (O(1) lookup) and return cached ChromaDB chunk IDs.
+4. **Pre-computed t-SNE (Cache Layer 2)**: After vector embeddings are generated, `sklearn`'s t-SNE runs in a FastAPI background task to compute 2D dimensionality reduction. The $(x, y)$ coordinates are stored directly in the ChromaDB metadata for the interactive knowledge map.
+5. **LRU Query Cache (Cache Layer 3)**: A fast, in-memory LRU cache (`maxsize=128`) wraps the retrieval engine, instantly resolving repeated identical queries during a single session.
+6. **SSE Progress Stream**: The `/ingest` POST endpoint handles uploads and triggers a background task, while clients can subscribe to the `/progress/{doc_id}` Server-Sent Events (SSE) endpoint to receive granular, real-time updates (file received → summarising → chunking → embedding → t-SNE → done) without timing out the browser.
+
 ## Directory Structure
 
 ```text
