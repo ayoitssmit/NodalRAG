@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-
+import ingestion
 app = FastAPI(title="NodalRAG API", description="Backend for NodalRAG")
 
 # Add CORS for localhost:3000
@@ -15,6 +15,9 @@ app.add_middleware(
 
 class QueryRequest(BaseModel):
     query: str
+    doc_id: str
+
+app.include_router(ingestion.router)
 
 @app.get("/")
 def read_root():
@@ -24,15 +27,11 @@ def read_root():
 def health_check():
     return {"status": "ok"}
 
-@app.post("/ingest")
-def ingest_document():
-    # Stub for Phase 2
-    return {"status": "not implemented", "message": "501 Stub"}
-
 @app.post("/query")
 def query_documents(req: QueryRequest):
-    # Stub for Phase 5
-    return {"status": "not implemented", "message": "501 Stub"}
+    # Use Cache Layer 3
+    response_text = ingestion.cached_query(req.query, req.doc_id)
+    return {"status": "success", "response": response_text}
 
 @app.get("/graph")
 def get_graph():

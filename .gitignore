@@ -9,6 +9,8 @@ env/
 # Chroma DB
 chroma_db/
 backend/chroma_db/
+backend/chroma_db_test/
+*.db
 
 # Next.js / Node
 node_modules/
