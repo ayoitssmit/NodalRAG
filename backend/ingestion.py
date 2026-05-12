@@ -33,7 +33,7 @@ def init_dbs():
 init_dbs()
 
 # Settings
-Settings.llm = Ollama(model="llama3:8b", request_timeout=120.0)
+Settings.llm = Ollama(model="gemma3:latest", request_timeout=120.0)
 Settings.embed_model = OllamaEmbedding(model_name="nomic-embed-text")
 
 chroma_client = chromadb.PersistentClient(path=CHROMA_PATH)
@@ -72,6 +72,12 @@ def run_tsne_for_doc(doc_id: str):
         metadatas = results["metadatas"]
         
         if not embeddings or len(embeddings) < 2:
+            if doc_id in progress_streams:
+                asyncio.run_coroutine_threadsafe(
+                    progress_streams[doc_id].queue.put('{"status": "done"}'),
+                    asyncio.get_running_loop()
+                )
+                progress_streams[doc_id].is_done = True
             return
             
         n_samples = len(embeddings)
@@ -115,7 +121,7 @@ async def ingest_pipeline(file_path: str, doc_id: str, file_hash: str, backgroun
         full_text = "\n".join([d.text for d in documents])
         prompt = f"Summarize the following document in exactly 2 sentences. Do not include any other text.\n\n{full_text[:10000]}"
         
-        llm = Ollama(model="llama3:8b", request_timeout=120.0)
+        llm = Ollama(model="gemma3:latest", request_timeout=120.0)
         summary_response = await asyncio.to_thread(llm.complete, prompt)
         summary = str(summary_response).strip()
         
